@@ -1,4 +1,3 @@
-#include <SDL2/SDL_image.h>
 #include "game.h"
 
 void
@@ -116,21 +115,31 @@ renderGame(SDL_Renderer *renderer, SDL_Texture *sprites, const uint8_t *board, u
 uint8_t
 init(SDL_Window **window, SDL_Renderer **renderer, SDL_Texture **sprites)
 {
+	SDL_Surface *loadSurface;
+
+	/* Init SDL */
 	if (SDL_Init(SDL_INIT_VIDEO))
 		return INIT_SDL;
+	/* Create window */
 	*window = SDL_CreateWindow(NAME,
 			SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 			SCREEN_W, SCREEN_H,
-		SDL_WINDOW_SHOWN);
-	if (IMG_Init(IMG_INIT_PNG) ^ IMG_INIT_PNG)
-		return INIT_PNG;
+			SDL_WINDOW_SHOWN);
 	if (!*window)
 		return WINDOW;
+	/* Create renderer */
 	*renderer = SDL_CreateRenderer(*window, -1, SDL_RENDERER_ACCELERATED);
 	if (!*renderer)
 		return RENDERER;
-	if (!(*sprites = IMG_LoadTexture(*renderer, SHEET)))
+	/* Load sprite sheet */
+	if (!(loadSurface = SDL_LoadBMP(SHEET)))
 		return IMG;
+	SDL_SetColorKey(loadSurface, SDL_TRUE, SDL_MapRGB(loadSurface->format, KEY));
+	*sprites = SDL_CreateTextureFromSurface(*renderer, loadSurface);
+	SDL_FreeSurface(loadSurface);
+	if (!*sprites)
+		return TEX;
+	/* Render scene */
 	SDL_SetRenderDrawColor(*renderer, BG);
 	SDL_RenderClear(*renderer);
 	renderScene(*renderer, *sprites);
@@ -142,13 +151,13 @@ quit(uint8_t code, SDL_Window *window, SDL_Renderer *renderer, SDL_Texture *spri
 {
 	switch (code) {
 	case SUCCESS:
+		SDL_DestroyTexture(sprites);
+	case TEX:
 	case IMG:
 		SDL_DestroyRenderer(renderer);
 	case RENDERER:
 		SDL_DestroyWindow(window);
 	case WINDOW:
-		SDL_DestroyTexture(sprites);
-	case INIT_PNG:
 		SDL_Quit();
 	default:
 		exit(code);

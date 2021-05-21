@@ -12,10 +12,10 @@ main(int argc, char *argv[])
 	SDL_Texture *sprites = NULL;
 
 	switch ((initRet = init(&window, &renderer, &sprites))) {
-	case 0:
+	case SUCCESS:
 		break;
-	case INIT_PNG:
-		printf("Could not initialize IMG system\n");
+	case TEX:
+		printf("Could not load surface as texture\n");
 		quit(initRet, window, renderer, sprites);
 	case IMG:
 		printf("Could not load image " SHEET "\n");
