@@ -1,7 +1,7 @@
 SRC = main.c render.c logic.c
 OBJ = main.o render.o logic.o
 DEST = game
-INCS = -lSDL2 -lSDL2_image
+INCS = -lSDL2
 CFLAGS = -std=c99 -Wall -O3 -pedantic
 CC = cc
 
