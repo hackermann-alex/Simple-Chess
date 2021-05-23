@@ -85,13 +85,13 @@ renderPiece(SDL_Renderer *renderer, SDL_Texture *sprites,
 {
 	uint8_t j = i & 7;
 	SDL_Rect clip = { 0, 0, PIECE_W, PIECE_H };
-	SDL_Rect renderQuad = { (ORIGIN_X) + ((i >> 3) + j) * (TILE_W >> 1) + 24,
-		(SCREEN_H >> 1) - ((i >> 3) - j) * ((TILE_W >> 2) + 1) - 28,
+	SDL_Rect renderQuad = { (ORIGIN_X) + ((i >>= 3) + j) * (TILE_W >> 1) + 24,
+		(SCREEN_H >> 1) - (i - j) * ((TILE_W >> 2) + 1) - 28,
 		PIECE_W, PIECE_H };
 
 	if (!piece)
 		return;
-	clip.x = PIECE_W * (piece - 1);
+	clip.x = PIECE_W * (piece - W_PAWN);
 	SDL_RenderCopy(renderer, sprites, &clip, &renderQuad);
 }
 
