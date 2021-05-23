@@ -1,4 +1,3 @@
-SRC = main.c render.c logic.c
 OBJ = main.o render.o logic.o
 DEST = game
 INCS = -lSDL2
