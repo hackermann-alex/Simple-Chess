@@ -10,23 +10,23 @@ uint64_t
 mvPawn(const uint8_t *board, uint8_t i)
 {
 	uint8_t row = i >> 3, column = i & 7,
-		white = board[i] == W_PAWN;
-	int8_t offsetRow = (white << 4) - 8;
+		black = IS_BLACK(board[i]);
+	int8_t offsetRow = 8 - (black << 4);
 	uint64_t out = 0;
 
 	if (row == 7 || row == 0)
 		return 0;
 	if (!board[i + offsetRow]) {
 		out |= (uint64_t)1 << (i + offsetRow);
-		if (((white && row == 1) || (!white && row == 6)) &&
+		if (((!black && row == 1) || (black && row == 6)) &&
 			!board[i + 2 * offsetRow])
-			out |= (uint64_t)1 << (i + 2 * offsetRow);
+			out |= (uint64_t)1 << (i + (offsetRow << 1));
 	}
 	if (column && board[i + offsetRow - 1] &&
-			(board[i + offsetRow - 1] & 1) ^ white)
+			IS_BLACK(board[i + offsetRow - 1]) != black)
 		out |= (uint64_t)1 << (i + offsetRow - 1);
 	if (column != 7 && board[i + offsetRow + 1] &&
-			(board[i + offsetRow + 1] & 1) ^ white)
+			IS_BLACK(board[i + offsetRow + 1]) != black)
 		out |= (uint64_t)1 << (i + offsetRow + 1);
 	return out;
 }
@@ -35,33 +35,33 @@ uint64_t
 mvKnight(const uint8_t *board, uint8_t i)
 {
 	uint8_t row = i >> 3, column = i & 7,
-		white = board[i] == W_KNIGHT,
+		black = IS_BLACK(board[i]),
 		space[2] = { 7 - column, 7 - row };
 	uint64_t out = 0;
 
 	if (space[0] >= 2 && space[1] >= 1 &&
-		(!board[i + 10] || ((board[i + 10] & 1) ^ white)))
+		(!board[i + 10] || (IS_BLACK(board[i + 10]) != black)))
 		out |= (uint64_t)1 << (i + 10);
 	if (space[0] >= 1 && space[1] >= 2 &&
-		(!board[i + 17] || ((board[i + 17] & 1) ^ white)))
+		(!board[i + 17] || (IS_BLACK(board[i + 17]) != black)))
 		out |= (uint64_t)1 << (i + 17);
 	if (space[1] >= 2 && column >= 1 &&
-		(!board[i + 15] || ((board[i + 15] & 1) ^ white)))
+		(!board[i + 15] || (IS_BLACK(board[i + 15]) != black)))
 		out |= (uint64_t)1 << (i + 15);
 	if (space[1] >= 1 && column >= 2 &&
-		(!board[i + 6] || ((board[i + 6] & 1) ^ white)))
+		(!board[i + 6] || (IS_BLACK(board[i + 6]) != black)))
 		out |= (uint64_t)1 << (i + 6);
 	if (column >= 2 && row >= 1 &&
-		(!board[i - 10] || ((board[i - 10] & 1) ^ white)))
+		(!board[i - 10] || (IS_BLACK(board[i - 10]) != black)))
 		out |= (uint64_t)1 << (i - 10);
 	if (column >= 1 && row >= 2 &&
-		(!board[i - 17] || ((board[i - 17] & 1) ^ white)))
+		(!board[i - 17] || (IS_BLACK(board[i - 17]) != black)))
 		out |= (uint64_t)1 << (i -17);
 	if (row >= 2 && space[0] >= 1 &&
-		(!board[i - 15] || ((board[i - 15] & 1) ^ white)))
+		(!board[i - 15] || (IS_BLACK(board[i - 15]) != black)))
 		out |= (uint64_t)1 << (i - 15);
 	if (row >= 1 && space[0] >= 2 &&
-		(!board[i - 6] || ((board[i - 6] & 1) ^ white)))
+		(!board[i - 6] || (IS_BLACK(board[i - 6]) != black)))
 		out |= (uint64_t)1 << (i - 6);
 	return out;
 }
@@ -70,28 +70,28 @@ uint64_t
 mvBishop(const uint8_t *board, uint8_t i)
 {
 	int8_t n;
-	uint8_t white = board[i] & 1;
+	uint8_t black = IS_BLACK(board[i]);
 	uint64_t out = 0;
 
 	/* Northeast */
 	for (n = i + 9; (n & 7) && n < 64 && !board[n]; n += 9)
 		out |= (uint64_t)1 << n;
-	if ((n & 7) && n < 64 && ((board[n] & 1) ^ white))
+	if ((n & 7) && n < 64 && (IS_BLACK(board[n]) != black))
 		out |= (uint64_t)1 << n;
 	/* Southwest */
 	for (n = i - 9; (n & 7) != 7 && n >= 0 && !board[n]; n -= 9)
 		out |= (uint64_t)1 << n;
-	if ((n & 7) != 7 && n >= 0 && ((board[n] & 1) ^ white))
+	if ((n & 7) != 7 && n >= 0 && (IS_BLACK(board[n]) != black))
 		out |= (uint64_t)1 << n;
 	/* Northwest */
 	for (n = i + 7; n < 64 && (n & 7) != 7 && !board[n]; n += 7)
 		out |= (uint64_t)1 << n;
-	if (n < 64 && (n & 7) != 7 && ((board[n] & 1) ^ white))
+	if (n < 64 && (n & 7) != 7 && (IS_BLACK(board[n]) != black))
 		out |= (uint64_t)1 << n;
 	/* Southeast */
 	for (n = i - 7; n >= 0 && (n & 7) && !board[n]; n -= 7)
 		out |= (uint64_t)1 << n;
-	if (n >= 0 && (n & 7) && ((board[n] & 1) ^ white))
+	if (n >= 0 && (n & 7) && (IS_BLACK(board[n]) != black))
 		out |= (uint64_t)1 << n;
 	return out;
 }
@@ -100,28 +100,28 @@ uint64_t
 mvRook(const uint8_t *board, uint8_t i)
 {
 	int8_t n;
-	uint8_t white = board[i] & 1;
+	uint8_t black = IS_BLACK(board[i]);
 	uint64_t out = 0;
 
 	/* East */
 	for (n = i + 1; (n & 7) && !board[n]; ++n)
 		out |= (uint64_t)1 << n;
-	if ((n & 7) && ((board[n] & 1) ^ white))
+	if ((n & 7) && (IS_BLACK(board[n]) != black))
 		out |= (uint64_t)1 << n;
 	/* West */
 	for (n = i - 1; (n & 7) != 7 && !board[n]; --n)
 		out |= (uint64_t)1 << n;
-	if ((n & 7) != 7 && ((board[n] & 1) ^ white))
+	if ((n & 7) != 7 && (IS_BLACK(board[n]) != black))
 		out |= (uint64_t)1 << n;
 	/* North */
 	for (n = i + 8; n < 64 && !board[n]; n += 8)
 		out |= (uint64_t)1 << n;
-	if (n < 64 && ((board[n] & 1) ^ white))
+	if (n < 64 && (IS_BLACK(board[n]) != black))
 		out |= (uint64_t)1 << n;
 	/* South */
 	for (n = i - 8; n >= 0 && !board[n]; n -= 8)
 		out |= (uint64_t)1 << n;
-	if (n >= 0 && ((board[n] & 1) ^ white))
+	if (n >= 0 && (IS_BLACK(board[n]) != black))
 		out |= (uint64_t)1 << n;
 	return out;
 }
@@ -135,32 +135,32 @@ mvQueen(const uint8_t *board, uint8_t i)
 uint64_t
 mvKing(const uint8_t *board, uint8_t i)
 {
-	uint8_t row = i >> 3, column = i & 7, white = board[i] == W_KING;
+	uint8_t row = i >> 3, column = i & 7, black = IS_BLACK(board[i]);
 	uint64_t out = 0;
 
 	if (column != 7 &&
-	(!board[i + 1] || ((board[i + 1] & 1) ^ white)))
+	(!board[i + 1] || (IS_BLACK(board[i + 1]) != black)))
 		out |= (uint64_t)1 << (i + 1);
 	if (column != 7 && row < 6 &&
-	(!board[i + 9] || ((board[i + 9] & 1) ^ white)))
+	(!board[i + 9] || (IS_BLACK(board[i + 9]) != black)))
 		out |= (uint64_t)1 << (i + 9);
 	if (row < 6 &&
-	(!board[i + 8] || ((board[i + 8] & 1) ^ white)))
+	(!board[i + 8] || (IS_BLACK(board[i + 8]) != black)))
 		out |= (uint64_t)1 << (i + 8);
 	if (column && row < 6 &&
-	(!board[i + 7] || ((board[i + 7] & 1) ^ white)))
+	(!board[i + 7] || (IS_BLACK(board[i + 7]) != black)))
 		out |= (uint64_t)1 << (i + 7);
 	if (column &&
-	(!board[i - 1] || ((board[i - 1] & 1) ^ white)))
+	(!board[i - 1] || (IS_BLACK(board[i - 1]) != black)))
 		out |= (uint64_t)1 << (i - 1);
 	if (column && row &&
-	(!board[i - 9] || ((board[i - 9] & 1) ^ white)))
+	(!board[i - 9] || (IS_BLACK(board[i - 9]) != black)))
 		out |= (uint64_t)1 << (i - 9);
 	if (row &&
-	(!board[i - 8] || ((board[i - 8] & 1) ^ white)))
+	(!board[i - 8] || (IS_BLACK(board[i - 8]) != black)))
 		out |= (uint64_t)1 << (i - 8);
 	if ((i & 7) != 7 && row &&
-	(!board[i - 7] || ((board[i - 7] & 1) ^ white)))
+	(!board[i - 7] || (IS_BLACK(board[i - 7]) != black)))
 		out |= (uint64_t)1 << (i - 7);
 	return out;
 }
@@ -168,7 +168,7 @@ mvKing(const uint8_t *board, uint8_t i)
 uint64_t
 getMoves(const game_t *game, uint8_t i)
 {
-	if (!game->board[i] || (game->board[i] & 1) == game->state)
+	if (!game->board[i] || IS_BLACK(game->board[i]) != game->state)
 		return 0;
 	switch (game->board[i]) {
 	case W_PAWN:
