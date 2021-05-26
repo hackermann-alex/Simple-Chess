@@ -6,8 +6,58 @@
  */
 #include "game.h"
 
+#define IS_BLACK(p) ((p) & 1)
+#define NOT_PINNED(d, dir) ((d) == NONE || (d) == (dir))
+
+enum directions { NONE = -1, E, NE, N, NW };
+
+int8_t
+pinnedTo(const uint8_t *board, uint8_t i, uint8_t j, uint8_t sel)
+{
+	uint8_t n, dir, black = IS_BLACK(board[j]);
+	int8_t diff;
+
+	if ((i >> 3) == (j >> 3)) {
+		diff = 2 * (i > j) - 1;
+		dir = E;
+	} else if ((i & 7) - (j & 7) == (i >> 3) - (j >> 3)) {
+		diff = 18 * (i > j) - 9;
+		dir = NE;
+	} else if ((i & 7) == (j & 7)) {
+		diff = 16 * (i > j) - 8;
+		dir = N;
+	} else if ((i & 7) - (j & 7) == (j >> 3) - (i >> 3)) {
+		diff = 14 * (i > j) - 7;
+		dir = NW;
+	} else {
+		return -1;
+	}
+	for (n = j + diff; !board[n]; n += diff);
+	if (n != i)
+		return -1;
+/* This for loop is garbage, fix me please */
+	for (n += diff; !board[n] && (n >> 3) && (n >> 3) < 7 && (n & 7) && (n & 7) < 7;
+			n += diff);
+	if (board[n] == (dir & 1 ? B_BISHOP - black : B_ROOK - black) ||
+			board[n] == B_QUEEN - black)
+		return sel ? n : dir;
+	return -1;
+}
+
+inline int8_t
+pinDir(const uint8_t *board, uint8_t i, uint8_t j)
+{
+	return pinnedTo(board, i, j, 0);
+}
+
+inline int8_t
+pinSqr(const uint8_t *board, uint8_t i, uint8_t j)
+{
+	return pinnedTo(board, i, j, 1);
+}
+
 uint64_t
-mvPawn(const uint8_t *board, uint8_t i)
+mvPawn(const uint8_t *board, uint8_t i, int8_t dir)
 {
 	uint8_t row = i >> 3, column = i & 7,
 		black = IS_BLACK(board[i]);
@@ -16,29 +66,33 @@ mvPawn(const uint8_t *board, uint8_t i)
 
 	if (row == 7 || row == 0)
 		return 0;
-	if (!board[i + offsetRow]) {
+	if (!board[i + offsetRow] && NOT_PINNED(dir, N)) {
 		out |= (uint64_t)1 << (i + offsetRow);
 		if (((!black && row == 1) || (black && row == 6)) &&
 			!board[i + 2 * offsetRow])
 			out |= (uint64_t)1 << (i + (offsetRow << 1));
 	}
 	if (column && board[i + offsetRow - 1] &&
-			IS_BLACK(board[i + offsetRow - 1]) != black)
+			IS_BLACK(board[i + offsetRow - 1]) != black &&
+			NOT_PINNED(dir, black ? NE : NW))
 		out |= (uint64_t)1 << (i + offsetRow - 1);
 	if (column != 7 && board[i + offsetRow + 1] &&
-			IS_BLACK(board[i + offsetRow + 1]) != black)
+			IS_BLACK(board[i + offsetRow + 1]) != black &&
+			NOT_PINNED(dir, black ? NW : NE))
 		out |= (uint64_t)1 << (i + offsetRow + 1);
 	return out;
 }
 
 uint64_t
-mvKnight(const uint8_t *board, uint8_t i)
+mvKnight(const uint8_t *board, uint8_t i, int8_t dir)
 {
 	uint8_t row = i >> 3, column = i & 7,
 		black = IS_BLACK(board[i]),
 		space[2] = { 7 - column, 7 - row };
 	uint64_t out = 0;
 
+	if (dir != NONE)
+		return 0;
 	if (space[0] >= 2 && space[1] >= 1 &&
 		(!board[i + 10] || (IS_BLACK(board[i + 10]) != black)))
 		out |= (uint64_t)1 << (i + 10);
@@ -67,69 +121,83 @@ mvKnight(const uint8_t *board, uint8_t i)
 }
 
 uint64_t
-mvBishop(const uint8_t *board, uint8_t i)
+mvBishop(const uint8_t *board, uint8_t i, int8_t dir)
 {
 	int8_t n;
 	uint8_t black = IS_BLACK(board[i]);
 	uint64_t out = 0;
 
-	/* Northeast */
-	for (n = i + 9; (n & 7) && n < 64 && !board[n]; n += 9)
-		out |= (uint64_t)1 << n;
-	if ((n & 7) && n < 64 && (IS_BLACK(board[n]) != black))
-		out |= (uint64_t)1 << n;
-	/* Southwest */
-	for (n = i - 9; (n & 7) != 7 && n >= 0 && !board[n]; n -= 9)
-		out |= (uint64_t)1 << n;
-	if ((n & 7) != 7 && n >= 0 && (IS_BLACK(board[n]) != black))
-		out |= (uint64_t)1 << n;
-	/* Northwest */
-	for (n = i + 7; n < 64 && (n & 7) != 7 && !board[n]; n += 7)
-		out |= (uint64_t)1 << n;
-	if (n < 64 && (n & 7) != 7 && (IS_BLACK(board[n]) != black))
-		out |= (uint64_t)1 << n;
-	/* Southeast */
-	for (n = i - 7; n >= 0 && (n & 7) && !board[n]; n -= 7)
-		out |= (uint64_t)1 << n;
-	if (n >= 0 && (n & 7) && (IS_BLACK(board[n]) != black))
-		out |= (uint64_t)1 << n;
+	switch (dir) {
+	case NONE:
+	case NE:
+		/* Northeast */
+		for (n = i + 9; (n & 7) && n < 64 && !board[n]; n += 9)
+			out |= (uint64_t)1 << n;
+		if ((n & 7) && n < 64 && (IS_BLACK(board[n]) != black))
+			out |= (uint64_t)1 << n;
+		/* Southwest */
+		for (n = i - 9; (n & 7) != 7 && n >= 0 && !board[n]; n -= 9)
+			out |= (uint64_t)1 << n;
+		if ((n & 7) != 7 && n >= 0 && (IS_BLACK(board[n]) != black))
+			out |= (uint64_t)1 << n;
+		if (dir != NONE)
+			break;
+	case NW:
+		/* Northwest */
+		for (n = i + 7; n < 64 && (n & 7) != 7 && !board[n]; n += 7)
+			out |= (uint64_t)1 << n;
+		if (n < 64 && (n & 7) != 7 && (IS_BLACK(board[n]) != black))
+			out |= (uint64_t)1 << n;
+		/* Southeast */
+		for (n = i - 7; n >= 0 && (n & 7) && !board[n]; n -= 7)
+			out |= (uint64_t)1 << n;
+		if (n >= 0 && (n & 7) && (IS_BLACK(board[n]) != black))
+			out |= (uint64_t)1 << n;
+	}
 	return out;
 }
 
 uint64_t
-mvRook(const uint8_t *board, uint8_t i)
+mvRook(const uint8_t *board, uint8_t i, int8_t dir)
 {
 	int8_t n;
 	uint8_t black = IS_BLACK(board[i]);
 	uint64_t out = 0;
 
-	/* East */
-	for (n = i + 1; (n & 7) && !board[n]; ++n)
-		out |= (uint64_t)1 << n;
-	if ((n & 7) && (IS_BLACK(board[n]) != black))
-		out |= (uint64_t)1 << n;
-	/* West */
-	for (n = i - 1; (n & 7) != 7 && !board[n]; --n)
-		out |= (uint64_t)1 << n;
-	if ((n & 7) != 7 && (IS_BLACK(board[n]) != black))
-		out |= (uint64_t)1 << n;
-	/* North */
-	for (n = i + 8; n < 64 && !board[n]; n += 8)
-		out |= (uint64_t)1 << n;
-	if (n < 64 && (IS_BLACK(board[n]) != black))
-		out |= (uint64_t)1 << n;
-	/* South */
-	for (n = i - 8; n >= 0 && !board[n]; n -= 8)
-		out |= (uint64_t)1 << n;
-	if (n >= 0 && (IS_BLACK(board[n]) != black))
-		out |= (uint64_t)1 << n;
+	switch (dir) {
+	case NONE:
+	case E:
+		/* East */
+		for (n = i + 1; (n & 7) && !board[n]; ++n)
+			out |= (uint64_t)1 << n;
+		if ((n & 7) && (IS_BLACK(board[n]) != black))
+			out |= (uint64_t)1 << n;
+		/* West */
+		for (n = i - 1; (n & 7) != 7 && !board[n]; --n)
+			out |= (uint64_t)1 << n;
+		if ((n & 7) != 7 && (IS_BLACK(board[n]) != black))
+			out |= (uint64_t)1 << n;
+		if (dir != NONE)
+			break;
+	case N:
+		/* North */
+		for (n = i + 8; n < 64 && !board[n]; n += 8)
+			out |= (uint64_t)1 << n;
+		if (n < 64 && (IS_BLACK(board[n]) != black))
+			out |= (uint64_t)1 << n;
+		/* South */
+		for (n = i - 8; n >= 0 && !board[n]; n -= 8)
+			out |= (uint64_t)1 << n;
+		if (n >= 0 && (IS_BLACK(board[n]) != black))
+			out |= (uint64_t)1 << n;
+	}
 	return out;
 }
 
 inline uint64_t
-mvQueen(const uint8_t *board, uint8_t i)
+mvQueen(const uint8_t *board, uint8_t i, int8_t dir)
 {
-	return mvBishop(board, i) | mvRook(board, i);
+	return mvBishop(board, i, dir) | mvRook(board, i, dir);
 }
 
 uint64_t
@@ -172,25 +240,44 @@ getMoves(const game_t *game, uint8_t i)
 		return 0;
 	switch (game->board[i]) {
 	case W_PAWN:
+		return mvPawn(game->board, i, pinDir(game->board, i, game->whiteKing));
 	case B_PAWN:
-		return mvPawn(game->board, i);
+		return mvPawn(game->board, i, pinDir(game->board, i, game->blackKing));
 	case W_KNIGHT:
+		return mvKnight(game->board, i, pinDir(game->board, i, game->whiteKing));
 	case B_KNIGHT:
-		return mvKnight(game->board, i);
+		return mvKnight(game->board, i, pinDir(game->board, i, game->blackKing));
 	case W_BISHOP:
+		return mvBishop(game->board, i, pinDir(game->board, i, game->whiteKing));
 	case B_BISHOP:
-		return mvBishop(game->board, i);
+		return mvBishop(game->board, i, pinDir(game->board, i, game->blackKing));
 	case W_ROOK:
+		return mvRook(game->board, i, pinDir(game->board, i, game->whiteKing));
 	case B_ROOK:
-		return mvRook(game->board, i);
+		return mvRook(game->board, i, pinDir(game->board, i, game->blackKing));
 	case W_QUEEN:
+		return mvQueen(game->board, i, pinDir(game->board, i, game->whiteKing));
 	case B_QUEEN:
-		return mvQueen(game->board, i);
+		return mvQueen(game->board, i, pinDir(game->board, i, game->blackKing));
 	case W_KING:
 	case B_KING:
 		return mvKing(game->board, i);
 	}
 	return 0;
+}
+
+void
+move(game_t *game, uint8_t prevI, uint8_t i)
+{
+	switch (game->board[prevI]) {
+	case W_KING:
+		game->whiteKing = i;
+	case B_KING:
+		game->blackKing = i;
+	}
+	game->board[i] = game->board[prevI];
+	game->board[prevI] = EMPTY;
+	game->state = !game->state;
 }
 
 int8_t
@@ -207,16 +294,7 @@ validMove(uint64_t bitBoard, uint8_t i)
 	return (bitBoard >> i) & 1;
 }
 
-void
-move(game_t *game, uint8_t prevI, uint8_t i)
-{
-	game->board[i] = game->board[prevI];
-	game->board[prevI] = EMPTY;
-	game->state = !game->state;
-}
  /*
-enum directions { NONE, E, NE, N, NW };
-
 uint8_t
 atkKnight(uint8_t i, uint8_t *out)
 {
@@ -247,36 +325,6 @@ atkPawn(uint8_t white, uint8_t i, uint8_t *out)
 	uint8_t column = i & 7;
 
 	return (out[(i >> 3) + 2 * white - 1] |= column ? 0b101 << (column - 1) : 0b10) != 0;
-}
-
-uint16_t
-detectPin(const uint8_t *board, uint8_t i, uint8_t j)
-{
-	uint8_t n, dir, white = board[j] & 1;
-	int8_t diff;
-
-	if ((i >> 3) == (j >> 3)) {
-		diff = 2 * (i > j) - 1;
-		dir = E;
-	} else if ((i & 7) - (j & 7) == (i >> 3) - (j >> 3)) {
-		diff = 18 * (i > j) - 9;
-		dir = NE;
-	} else if ((i & 7) == (j & 7)) {
-		diff = 16 * (i > j) - 8;
-		dir = N;
-	} else if ((i & 7) - (j & 7) == (j >> 3) - (i >> 3)) {
-		diff = 14 * (i > j) - 7;
-		dir = NW;
-	} else {
-		return NONE;
-	}
-	for (n = j + diff; !board[n]; n += diff);
-	if (n != i)
-		return NONE;
-	for (n += diff; !board[n] && (n >> 3) && (n >> 3) < 7 && (n & 7) && (n & 7) < 7;
-			n += diff);
-	return ((board[n] == W_ROOK + white || board[n] == W_QUEEN + white)
-			* dir << 8) | n;
 }
 
 inline uint8_t

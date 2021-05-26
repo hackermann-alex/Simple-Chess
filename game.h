@@ -18,8 +18,6 @@
 #define ORIGIN_X (SCREEN_W >> 1) - (TILE_W << 2)
 #define ORIGIN_Y (SCREEN_H - TILE_H) >> 1
 
-#define IS_BLACK(p) ((p) & 1)
-
 enum codes { SUCCESS, INIT_SDL, WINDOW, RENDERER, IMG, TEX };
 enum states { W_MOVE, B_MOVE, W_WON, B_WON, DRAW };
 enum pieces { EMPTY = 0, W_PAWN = 2, B_PAWN, W_KNIGHT, B_KNIGHT, W_BISHOP,
@@ -27,6 +25,8 @@ enum pieces { EMPTY = 0, W_PAWN = 2, B_PAWN, W_KNIGHT, B_KNIGHT, W_BISHOP,
 
 typedef struct {
 	uint8_t board[64];
+	uint8_t whiteKing;
+	uint8_t blackKing;
 	uint8_t state;
 } game_t;
 

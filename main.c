@@ -45,6 +45,7 @@ mainLoop(SDL_Renderer *renderer, SDL_Texture *sprites)
 			  0, 0, 0, 0, 0, 0, 0, 0,
 			  B_PAWN, B_PAWN,   B_PAWN,   B_PAWN,  B_PAWN, B_PAWN,   B_PAWN,   B_PAWN,
 			  B_ROOK, B_KNIGHT, B_BISHOP, B_QUEEN, B_KING, B_BISHOP, B_KNIGHT, B_ROOK },
+	       004, 074,
 	       W_MOVE 
 	};
 
