@@ -1,38 +1,35 @@
 #include <stdio.h>
 #include "game.h"
 
-void mainLoop(SDL_Renderer *renderer, SDL_Texture *sprites);
+void mainLoop();
 
 int
 main(int argc, char *argv[])
 {
 	uint8_t initRet;
-	SDL_Window *window = NULL;
-	SDL_Renderer *renderer = NULL;
-	SDL_Texture *sprites = NULL;
 
-	switch ((initRet = init(&window, &renderer, &sprites))) {
+	switch ((initRet = init())) {
 	case SUCCESS:
 		break;
 	case TEX:
 		printf("Could not load surface as texture\n");
-		quit(initRet, window, renderer, sprites);
+		quit(initRet);
 	case IMG:
 		printf("Could not load image " SHEET "\n");
-		quit(initRet, window, renderer, sprites);
+		quit(initRet);
 	default:
 		printf("SDL could not initialize. Error: %s\n",
 			SDL_GetError());
-		quit(initRet, window, renderer, sprites);
+		quit(initRet);
 	}
 
-	mainLoop(renderer, sprites);
-	quit(0, window, renderer, sprites);
+	mainLoop();
+	quit(0);
 }
 
 
 void
-mainLoop(SDL_Renderer *renderer, SDL_Texture *sprites)
+mainLoop()
 {
 	uint8_t i, prevI;
 	uint64_t bitBoard = 0;
@@ -49,8 +46,7 @@ mainLoop(SDL_Renderer *renderer, SDL_Texture *sprites)
 	       W_MOVE 
 	};
 
-	renderGame(renderer, sprites, game.board, bitBoard);
-	SDL_RenderPresent(renderer);
+	renderGame(game.board, bitBoard);
 loop:
 	/* Poll all events on the queue */
 	while (SDL_WaitEvent(&e)) {
@@ -62,14 +58,12 @@ loop:
 			if (validMove(bitBoard, i)) {
 				move(&game, prevI, i);
 				bitBoard = 0;
-				renderGame(renderer, sprites, game.board, bitBoard);
+				renderGame(game.board, bitBoard);
 			} else {
 				bitBoard = getMoves(&game, i);
-				renderGame(renderer, sprites, game.board, bitBoard);
+				renderGame(game.board, bitBoard);
 				prevI = i;
 			}
-
-			SDL_RenderPresent(renderer);
 		}
 	}
 	goto loop;

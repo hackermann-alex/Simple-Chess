@@ -30,12 +30,9 @@ typedef struct {
 	uint8_t state;
 } game_t;
 
-void renderGame(SDL_Renderer *renderer, SDL_Texture *sprites,
-		const uint8_t *game, uint64_t bitBoard);
-uint8_t init(SDL_Window **window, SDL_Renderer **renderer,
-		SDL_Texture **sprites);
-void quit(uint8_t code, SDL_Window *window, SDL_Renderer *renderer,
-		SDL_Texture *sprites);
+void renderGame(const uint8_t *game, uint64_t bitBoard);
+uint8_t init();
+void quit(uint8_t code);
 
 int8_t getTile(int ix, int iy);
 uint64_t getMoves(const game_t *game, uint8_t i);

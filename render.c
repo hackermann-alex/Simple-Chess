@@ -1,7 +1,11 @@
 #include "game.h"
 
+static SDL_Window *window;
+static SDL_Renderer *renderer;
+static SDL_Texture *sprites;
+
 void
-renderTile(SDL_Renderer *renderer, SDL_Texture *sprites, uint8_t i)
+renderTile(uint8_t i)
 {
 	uint8_t j = i & 7;
 	const static SDL_Rect clips[2] = { { TILE_W, PIECE_H, TILE_W, TILE_H },
@@ -14,7 +18,7 @@ renderTile(SDL_Renderer *renderer, SDL_Texture *sprites, uint8_t i)
 }
 
 void
-renderMoves(SDL_Renderer *renderer, SDL_Texture *sprites, uint64_t bitBoard)
+renderMoves(uint64_t bitBoard)
 {
 	const static SDL_Rect clip = { 12 * PIECE_W, 16, 32, 16 };
 	SDL_Rect renderQuad = { 0, 0, 32, 16 };
@@ -33,7 +37,7 @@ renderMoves(SDL_Renderer *renderer, SDL_Texture *sprites, uint64_t bitBoard)
 }
 
 void
-renderScene(SDL_Renderer *renderer, SDL_Texture *sprites)
+renderScene()
 {
 	const static SDL_Rect clips[4] = { { TILE_W << 1, PIECE_H, TILE_W >> 1, TILE_H },
 		{ TILE_W * 3, PIECE_H, TILE_W >> 1, TILE_H },
@@ -68,20 +72,19 @@ renderScene(SDL_Renderer *renderer, SDL_Texture *sprites)
 		renderText.y -= (TILE_W >> 2) + 1;
 	}
 	for (i = 0; i < 64; ++i)
-		renderTile(renderer, sprites, i);
+		renderTile(i);
 }
 
 void
-renderBoard(SDL_Renderer *renderer, SDL_Texture *sprites)
+renderBoard()
 {
 	uint8_t i;
 	for (i = 0; i < 64; ++i)
-		renderTile(renderer, sprites, i);
+		renderTile(i);
 }
 
 void
-renderPiece(SDL_Renderer *renderer, SDL_Texture *sprites,
-		uint8_t i, const uint8_t piece)
+renderPiece(uint8_t i, const uint8_t piece)
 {
 	uint8_t j = i & 7;
 	SDL_Rect clip = { 0, 0, PIECE_W, PIECE_H };
@@ -96,7 +99,7 @@ renderPiece(SDL_Renderer *renderer, SDL_Texture *sprites,
 }
 
 void
-renderGame(SDL_Renderer *renderer, SDL_Texture *sprites, const uint8_t *board, uint64_t bitBoard)
+renderGame(const uint8_t *board, uint64_t bitBoard)
 {
 	const static SDL_Rect rect = { ORIGIN_X,
 		(SCREEN_H >> 1) - 9 * (TILE_W >> 2) - 9,
@@ -104,16 +107,17 @@ renderGame(SDL_Renderer *renderer, SDL_Texture *sprites, const uint8_t *board, u
 	int8_t i;
 
 	SDL_RenderFillRect(renderer, &rect);
-	renderBoard(renderer, sprites);
-	renderMoves(renderer, sprites, bitBoard);
+	renderBoard();
+	renderMoves(bitBoard);
 	for (i = 63; i >= 0; --i) {
 		if (board[i])
-			renderPiece(renderer, sprites, i, board[i]);
+			renderPiece(i, board[i]);
 	}
+	SDL_RenderPresent(renderer);
 }
 
 uint8_t
-init(SDL_Window **window, SDL_Renderer **renderer, SDL_Texture **sprites)
+init()
 {
 	SDL_Surface *loadSurface;
 
@@ -121,33 +125,33 @@ init(SDL_Window **window, SDL_Renderer **renderer, SDL_Texture **sprites)
 	if (SDL_Init(SDL_INIT_VIDEO))
 		return INIT_SDL;
 	/* Create window */
-	*window = SDL_CreateWindow(NAME,
+	window = SDL_CreateWindow(NAME,
 			SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 			SCREEN_W, SCREEN_H,
 			SDL_WINDOW_SHOWN);
-	if (!*window)
+	if (!window)
 		return WINDOW;
 	/* Create renderer */
-	*renderer = SDL_CreateRenderer(*window, -1, SDL_RENDERER_ACCELERATED);
-	if (!*renderer)
+	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+	if (!renderer)
 		return RENDERER;
 	/* Load sprite sheet */
 	if (!(loadSurface = SDL_LoadBMP(SHEET)))
 		return IMG;
 	SDL_SetColorKey(loadSurface, SDL_TRUE, SDL_MapRGB(loadSurface->format, KEY));
-	*sprites = SDL_CreateTextureFromSurface(*renderer, loadSurface);
+	sprites = SDL_CreateTextureFromSurface(renderer, loadSurface);
 	SDL_FreeSurface(loadSurface);
-	if (!*sprites)
+	if (!sprites)
 		return TEX;
 	/* Render scene */
-	SDL_SetRenderDrawColor(*renderer, BG);
-	SDL_RenderClear(*renderer);
-	renderScene(*renderer, *sprites);
+	SDL_SetRenderDrawColor(renderer, BG);
+	SDL_RenderClear(renderer);
+	renderScene();
 	return SUCCESS;
 }
 
 void
-quit(uint8_t code, SDL_Window *window, SDL_Renderer *renderer, SDL_Texture *sprites)
+quit(uint8_t code)
 {
 	switch (code) {
 	case SUCCESS:
