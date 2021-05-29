@@ -1,7 +1,6 @@
 #ifndef GAME_H
 #define GAME_H
 
-#include <SDL2/SDL.h>
 #include <stdint.h>
 
 #define SCREEN_W 960
